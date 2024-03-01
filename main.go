@@ -6,6 +6,7 @@ package main
 
 import (
 	"image"
+	"image/color"
 	_ "image/jpeg"
 	"image/png"
 	"log"
@@ -14,6 +15,19 @@ import (
 
 	"github.com/nfnt/resize"
 )
+
+func Gray(input image.Image) *image.Gray16 {
+	bounds := input.Bounds()
+	output := image.NewGray16(bounds)
+	width, height := bounds.Max.X, bounds.Max.Y
+	for x := 0; x < width; x++ {
+		for y := 0; y < height; y++ {
+			r, g, b, _ := input.At(x, y).RGBA()
+			output.SetGray16(x, y, color.Gray16{uint16((float64(r)+float64(g)+float64(b))/3 + .5)})
+		}
+	}
+	return output
+}
 
 func main() {
 	file, err := os.Open("test.jpg")
