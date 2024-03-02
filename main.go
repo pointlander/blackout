@@ -16,6 +16,17 @@ import (
 	"github.com/nfnt/resize"
 )
 
+// BinomialCoefficient is the binomial coeffcient
+func BinomialCoefficient(n, k float32) float32 {
+	if k > n {
+		return 0
+	} else if k == 0 || k == n {
+		return 1
+	}
+	return BinomialCoefficient(n-1, k-1) + BinomialCoefficient(n-1, k)
+}
+
+// Gray computes the gray scale version of an image
 func Gray(input image.Image) *image.Gray16 {
 	bounds := input.Bounds()
 	output := image.NewGray16(bounds)
