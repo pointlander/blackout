@@ -9,7 +9,8 @@ import (
 )
 
 func TestBinomialCoefficient(t *testing.T) {
-	if a := BinomialCoefficient(5, 2); a != 10 {
+	binomial := [256][256]Cache{}
+	if a := BinomialCoefficient(&binomial, 5, 2); a != 10 {
 		t.Fatal("(5,2) != 10 is ", a)
 	}
 }

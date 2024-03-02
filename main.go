@@ -16,14 +16,37 @@ import (
 	"github.com/nfnt/resize"
 )
 
+// Cache is a binomial cache entry
+type Cache struct {
+	Value float64
+	Valid bool
+}
+
 // BinomialCoefficient is the binomial coeffcient
-func BinomialCoefficient(n, k float32) float32 {
+func BinomialCoefficient(cache *[256][256]Cache, n, k float64) float64 {
 	if k > n {
 		return 0
 	} else if k == 0 || k == n {
 		return 1
 	}
-	return BinomialCoefficient(n-1, k-1) + BinomialCoefficient(n-1, k)
+	x := 0.0
+	if cache[int(n-1)][int(k-1)].Valid {
+		x = cache[int(n-1)][int(k-1)].Value
+	} else {
+		x = BinomialCoefficient(cache, n-1, k-1)
+		cache[int(n-1)][int(k-1)].Value = x
+		cache[int(n-1)][int(k-1)].Valid = true
+
+	}
+	y := 0.0
+	if cache[int(n-1)][int(k)].Valid {
+		y = cache[int(n-1)][int(k)].Value
+	} else {
+		y = BinomialCoefficient(cache, n-1, k)
+		cache[int(n-1)][int(k)].Value = y
+		cache[int(n-1)][int(k)].Valid = true
+	}
+	return x + y
 }
 
 // Gray computes the gray scale version of an image
@@ -41,6 +64,14 @@ func Gray(input image.Image) *image.Gray16 {
 }
 
 func main() {
+	binomial := [256][256]Cache{}
+	for n := 0; n < 256; n++ {
+		for k := 0; k <= n; k++ {
+			binomial[n][k].Value = BinomialCoefficient(&binomial, float64(n), float64(k))
+			binomial[n][k].Valid = true
+		}
+	}
+
 	file, err := os.Open("test.jpg")
 	if err != nil {
 		log.Fatal(err)
