@@ -10,7 +10,20 @@ import (
 
 func TestBinomialCoefficient(t *testing.T) {
 	binomial := [256][256]Cache{}
-	if a := BinomialCoefficient(&binomial, 5, 2); a != 10 {
-		t.Fatal("(5,2) != 10 is ", a)
+	type Test struct {
+		n, k uint
+		out  float64
+	}
+	tests := [...]Test{
+		{5, 2, 10},
+		{10, 5, 252},
+		{20, 13, 77520},
+		{25, 15, 3268760},
+		{27, 17, 8436285},
+	}
+	for _, test := range tests {
+		if a := BinomialCoefficient(&binomial, test.n, test.k); a != test.out {
+			t.Fatalf("(%d,%d) != %f is %f", test.n, test.k, test.out, a)
+		}
 	}
 }
