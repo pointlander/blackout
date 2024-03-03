@@ -5,11 +5,14 @@
 package main
 
 import (
+	"fmt"
 	"image"
 	"image/color"
 	_ "image/jpeg"
 	"image/png"
 	"log"
+	"math"
+	"math/rand"
 	"os"
 	"strings"
 
@@ -63,6 +66,26 @@ func Gray(input image.Image) *image.Gray16 {
 	return output
 }
 
+// Probability computes the probability
+func Probability(t1, t2 float64) float64 {
+	return (math.Exp(-t1) - math.Exp(-t2)) / (1 - math.Exp(-t2))
+}
+
+// Sample samples the binomial distribution
+func Sample(rng *rand.Rand, cache *[256][256]Cache, n uint, l1, l2 float64) uint {
+	sum := 0.0
+	sample := rng.Float64()
+	p := Probability(l1, l2)
+	for k := uint(0); k <= n; k++ {
+		f := cache[n][k].Value * math.Pow(p, float64(k)) * math.Pow(1-p, float64(n-k))
+		sum += f
+		if sum > sample {
+			return k
+		}
+	}
+	return 0
+}
+
 func main() {
 	binomial := [256][256]Cache{}
 	for n := uint(0); n < 256; n++ {
@@ -102,4 +125,10 @@ func main() {
 		log.Fatal(err)
 	}
 	file.Close()
+
+	rng := rand.New(rand.NewSource(1))
+	for i := 0; i < 16; i++ {
+		s := Sample(rng, &binomial, 128, .1, .5)
+		fmt.Println(s)
+	}
 }
