@@ -16,6 +16,8 @@ import (
 	"os"
 	"strings"
 
+	. "github.com/pointlander/matrix"
+
 	"github.com/nfnt/resize"
 )
 
@@ -25,31 +27,54 @@ type Cache struct {
 	Valid bool
 }
 
+// ByteCache is a byte binomial cache
+type ByteCache [256][256]Cache
+
 // BinomialCoefficient is the binomial coeffcient
-func BinomialCoefficient(cache *[256][256]Cache, n, k uint) float64 {
+func (b *ByteCache) BinomialCoefficient(n, k uint) float64 {
 	if k > n {
 		return 0
 	} else if k == 0 || k == n {
 		return 1
 	}
 	x := 0.0
-	if cache[n-1][k-1].Valid {
-		x = cache[int(n-1)][int(k-1)].Value
+	if b[n-1][k-1].Valid {
+		x = b[int(n-1)][int(k-1)].Value
 	} else {
-		x = BinomialCoefficient(cache, n-1, k-1)
-		cache[n-1][k-1].Value = x
-		cache[n-1][k-1].Valid = true
+		x = b.BinomialCoefficient(n-1, k-1)
+		b[n-1][k-1].Value = x
+		b[n-1][k-1].Valid = true
 
 	}
 	y := 0.0
-	if cache[n-1][k].Valid {
-		y = cache[int(n-1)][int(k)].Value
+	if b[n-1][k].Valid {
+		y = b[int(n-1)][int(k)].Value
 	} else {
-		y = BinomialCoefficient(cache, n-1, k)
-		cache[n-1][k].Value = y
-		cache[n-1][k].Valid = true
+		y = b.BinomialCoefficient(n-1, k)
+		b[n-1][k].Value = y
+		b[n-1][k].Valid = true
 	}
 	return x + y
+}
+
+// Probability computes the probability
+func Probability(t1, t2 float64) float64 {
+	return (math.Exp(-t1) - math.Exp(-t2)) / (1 - math.Exp(-t2))
+}
+
+// Sample samples the binomial distribution
+func (b *ByteCache) Sample(rng *rand.Rand, n uint, l1, l2 float64) uint {
+	sum := 0.0
+	sample := rng.Float64()
+	p := Probability(l1, l2)
+	for k := uint(0); k <= n; k++ {
+		f := b[n][k].Value * math.Pow(p, float64(k)) * math.Pow(1-p, float64(n-k))
+		sum += f
+		if sum > sample {
+			return k
+		}
+	}
+	return 0
 }
 
 // Gray computes the gray scale version of an image
@@ -66,31 +91,11 @@ func Gray(input image.Image) *image.Gray16 {
 	return output
 }
 
-// Probability computes the probability
-func Probability(t1, t2 float64) float64 {
-	return (math.Exp(-t1) - math.Exp(-t2)) / (1 - math.Exp(-t2))
-}
-
-// Sample samples the binomial distribution
-func Sample(rng *rand.Rand, cache *[256][256]Cache, n uint, l1, l2 float64) uint {
-	sum := 0.0
-	sample := rng.Float64()
-	p := Probability(l1, l2)
-	for k := uint(0); k <= n; k++ {
-		f := cache[n][k].Value * math.Pow(p, float64(k)) * math.Pow(1-p, float64(n-k))
-		sum += f
-		if sum > sample {
-			return k
-		}
-	}
-	return 0
-}
-
 func main() {
-	binomial := [256][256]Cache{}
+	binomial := ByteCache{}
 	for n := uint(0); n < 256; n++ {
 		for k := uint(0); k <= n; k++ {
-			binomial[n][k].Value = BinomialCoefficient(&binomial, n, k)
+			binomial[n][k].Value = binomial.BinomialCoefficient(n, k)
 			binomial[n][k].Valid = true
 		}
 	}
@@ -128,7 +133,12 @@ func main() {
 
 	rng := rand.New(rand.NewSource(1))
 	for i := 0; i < 16; i++ {
-		s := Sample(rng, &binomial, 128, .1, .5)
+		s := binomial.Sample(rng, 128, .1, .5)
 		fmt.Println(s)
+	}
+
+	forms := make([]Matrix, 10)
+	for i := range forms {
+		forms[i] = NewMatrix(32*32, 32*32)
 	}
 }
