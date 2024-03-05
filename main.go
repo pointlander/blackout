@@ -14,6 +14,7 @@ import (
 	"math"
 	"math/rand"
 	"os"
+	"runtime"
 	"strings"
 
 	. "github.com/pointlander/matrix"
@@ -139,6 +140,66 @@ func main() {
 
 	forms := make([]Matrix, 10)
 	for i := range forms {
-		forms[i] = NewMatrix(32*32, 32*32)
+		forms[i] = NewMatrix(32*32+1, 32*32)
 	}
+	target := NewZeroMatrix(32*32+1, 1)
+	target.Data[32*32] = 1
+	index := 0
+	bounds := input.Bounds()
+	width, height := bounds.Max.X, bounds.Max.Y
+	for x := 0; x < width; x++ {
+		for y := 0; y < height; y++ {
+			r, g, b, _ := input.At(x, y).RGBA()
+			target.Data[index] = float32(math.Round((float64(r)+float64(g)+float64(b))/(256.0*3) + .5))
+		}
+	}
+	coords := NewCoord(32*32+1, 32*32)
+	optimizer := NewOptimizer(rng, 8, 2, 10, func(samples []Sample, x ...Matrix) {
+		done := make(chan bool, 8)
+		process := func(seed int64, index int) {
+			rng := rand.New(rand.NewSource(seed))
+			X := NewZeroMatrix(32*32+1, 1)
+			X.Data[32*32] = 1
+			for i := 0; i < 10; i++ {
+				x := samples[index].Vars[i][0]
+				y := samples[index].Vars[i][1]
+				z := samples[index].Vars[i][2]
+				Y := Sigmoid(MulT(Add(x, H(y, z)), X))
+				for j := 0; j < Y.Size(); j++ {
+					pixel := Y.Data[j] * 255
+					if pixel < 0 {
+						pixel = 0
+					} else if max := 255 - X.Data[j]; pixel > max {
+						pixel = max
+					}
+					d := binomial.Sample(rng, uint(pixel+.5), float64(i)*.1, float64(i+1)*.1)
+					X.Data[j] += float32(d)
+				}
+			}
+			cost := Quadratic(target, X)
+			samples[index].Cost = float64(cost.Data[0])
+			done <- true
+		}
+		cpus := runtime.NumCPU()
+		j, flight := 0, 0
+		for j < len(samples) && flight < cpus {
+			go process(rng.Int63(), j)
+			j++
+			flight++
+		}
+		for j < len(samples) {
+			<-done
+			flight--
+
+			go process(rng.Int63(), j)
+			j++
+			flight++
+		}
+		for j := 0; j < flight; j++ {
+			<-done
+		}
+	}, coords)
+	s := optimizer.Optimize(1e-6)
+	x := Add(s.Vars[0][0], H(s.Vars[0][1], s.Vars[0][2]))
+	_ = x
 }
