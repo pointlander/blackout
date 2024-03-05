@@ -156,10 +156,11 @@ func main() {
 		for y := 0; y < height; y++ {
 			r, g, b, _ := input.At(x, y).RGBA()
 			target.Data[index] = float32(math.Round((float64(r)+float64(g)+float64(b))/(256.0*3) + .5))
+			index++
 		}
 	}
 	coords := NewCoord(Size*Size+1, Size*Size)
-	optimizer := NewOptimizer(rng, 8, 2, 20, func(samples []Sample, x ...Matrix) {
+	optimizer := NewOptimizer(rng, 8, 1, 20, func(samples []Sample, x ...Matrix) {
 		done := make(chan bool, 8)
 		process := func(seed int64, index int) {
 			rng := rand.New(rand.NewSource(seed))
