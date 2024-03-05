@@ -22,6 +22,11 @@ import (
 	"github.com/nfnt/resize"
 )
 
+const (
+	// Size is the size of the image
+	Size = 16
+)
+
 // Cache is a binomial cache entry
 type Cache struct {
 	Value float64
@@ -119,7 +124,7 @@ func main() {
 	}
 	file.Close()
 
-	input = resize.Resize(32, 32, input, resize.NearestNeighbor)
+	input = resize.Resize(Size, Size, input, resize.NearestNeighbor)
 
 	file, err = os.Create(name + ".png")
 	if err != nil {
@@ -140,10 +145,10 @@ func main() {
 
 	forms := make([]Matrix, 10)
 	for i := range forms {
-		forms[i] = NewMatrix(32*32+1, 32*32)
+		forms[i] = NewMatrix(Size*Size+1, Size*Size)
 	}
-	target := NewZeroMatrix(32*32+1, 1)
-	target.Data[32*32] = 1
+	target := NewZeroMatrix(Size*Size+1, 1)
+	target.Data[Size*Size] = 1
 	index := 0
 	bounds := input.Bounds()
 	width, height := bounds.Max.X, bounds.Max.Y
@@ -153,13 +158,13 @@ func main() {
 			target.Data[index] = float32(math.Round((float64(r)+float64(g)+float64(b))/(256.0*3) + .5))
 		}
 	}
-	coords := NewCoord(32*32+1, 32*32)
+	coords := NewCoord(Size*Size+1, Size*Size)
 	optimizer := NewOptimizer(rng, 8, 2, 10, func(samples []Sample, x ...Matrix) {
 		done := make(chan bool, 8)
 		process := func(seed int64, index int) {
 			rng := rand.New(rand.NewSource(seed))
-			X := NewZeroMatrix(32*32+1, 1)
-			X.Data[32*32] = 1
+			X := NewZeroMatrix(Size*Size+1, 1)
+			X.Data[Size*Size] = 1
 			for i := 0; i < 10; i++ {
 				x := samples[index].Vars[i][0]
 				y := samples[index].Vars[i][1]
