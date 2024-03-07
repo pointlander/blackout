@@ -160,24 +160,24 @@ func main() {
 		}
 	}
 	coords := NewCoord(Size*Size+1, Size*Size)
-	optimizer := NewOptimizer(rng, 8, 1, 20, func(samples []Sample, x ...Matrix) {
+	optimizer := NewOptimizer(rng, 8, 1, 2, func(samples []Sample, x ...Matrix) {
 		done := make(chan bool, 8)
 		process := func(seed int64, index int) {
 			rng := rand.New(rand.NewSource(seed))
 			X := NewZeroMatrix(Size*Size+1, 1)
 			X.Data[Size*Size] = 1
 			for i := 0; i < 10; i++ {
-				x := samples[index].Vars[2*i][0]
-				y := samples[index].Vars[2*i][1]
-				z := samples[index].Vars[2*i][2]
+				x := samples[index].Vars[0][0]
+				y := samples[index].Vars[0][1]
+				z := samples[index].Vars[0][2]
 				Y := Sigmoid(MulT(Add(x, H(y, z)), X))
-				xx := samples[index].Vars[2*i+1][0]
-				yy := samples[index].Vars[2*i+1][1]
-				zz := samples[index].Vars[2*i+1][2]
+				xx := samples[index].Vars[1][0]
+				yy := samples[index].Vars[1][1]
+				zz := samples[index].Vars[1][2]
 				hidden := NewZeroMatrix(Size*Size+1, 1)
 				copy(hidden.Data, Y.Data)
 				hidden.Data[Size*Size] = 1
-				Y = Sigmoid(MulT(Add(xx, H(yy, zz)), hidden))
+				Y = MulT(Add(xx, H(yy, zz)), hidden)
 				for j := 0; j < Y.Size(); j++ {
 					pixel := Y.Data[j] * 255
 					if pixel < 0 {
