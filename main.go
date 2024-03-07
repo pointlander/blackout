@@ -212,7 +212,17 @@ func main() {
 			<-done
 		}
 	}, coords)
-	s := optimizer.Optimize(1e-6)
+	//s := optimizer.Optimize(1e-6)
+	dx, last := 1e-6, -1.0
+	var s Sample
+	for {
+		s = optimizer.Iterate()
+		fmt.Println(s.Cost)
+		if last > 0 && math.Abs(last-s.Cost) < dx {
+			break
+		}
+		last = s.Cost
+	}
 	x := Add(s.Vars[0][0], H(s.Vars[0][1], s.Vars[0][2]))
 	_ = x
 }
