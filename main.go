@@ -178,7 +178,15 @@ func main() {
 			copy(hidden.Data, Y.Data)
 			hidden.Data[Size*Size] = float32(t)
 			hidden.Data[Size*Size+1] = 1
-			Y = MulT(Add(xx, H(yy, zz)), hidden)
+			Y = Sigmoid(MulT(Add(xx, H(yy, zz)), hidden))
+			xxx := sample.Vars[2][0]
+			yyy := sample.Vars[2][1]
+			zzz := sample.Vars[2][2]
+			hidden = NewZeroMatrix(Size*Size+2, 1)
+			copy(hidden.Data, Y.Data)
+			hidden.Data[Size*Size] = float32(t)
+			hidden.Data[Size*Size+1] = 1
+			Y = MulT(Add(xxx, H(yyy, zzz)), hidden)
 			for j := 0; j < Y.Size(); j++ {
 				pixel := Y.Data[j] * 255
 				if pixel < 0 {
@@ -193,7 +201,7 @@ func main() {
 		return X
 	}
 	coords := NewCoord(Size*Size+2, Size*Size)
-	optimizer := NewOptimizer(rng, 16, 1, 2, func(samples []Sample, x ...Matrix) {
+	optimizer := NewOptimizer(rng, 16, 1, 3, func(samples []Sample, x ...Matrix) {
 		done := make(chan bool, 8)
 		process := func(seed int64, index int) {
 			X := forward(seed, samples[index])
