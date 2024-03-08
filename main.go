@@ -160,39 +160,43 @@ func main() {
 			index++
 		}
 	}
+	forward := func(seed int64, sample Sample) Matrix {
+		rng := rand.New(rand.NewSource(seed))
+		X := NewZeroMatrix(Size*Size+2, 1)
+		X.Data[Size*Size+1] = 1
+		for i := 0; i < Iterations; i++ {
+			t := float64(i) / float64(Iterations)
+			X.Data[Size*Size] = float32(t)
+			x := sample.Vars[0][0]
+			y := sample.Vars[0][1]
+			z := sample.Vars[0][2]
+			Y := Sigmoid(MulT(Add(x, H(y, z)), X))
+			xx := sample.Vars[1][0]
+			yy := sample.Vars[1][1]
+			zz := sample.Vars[1][2]
+			hidden := NewZeroMatrix(Size*Size+2, 1)
+			copy(hidden.Data, Y.Data)
+			hidden.Data[Size*Size] = float32(t)
+			hidden.Data[Size*Size+1] = 1
+			Y = MulT(Add(xx, H(yy, zz)), hidden)
+			for j := 0; j < Y.Size(); j++ {
+				pixel := Y.Data[j] * 255
+				if pixel < 0 {
+					pixel = 0
+				} else if max := 255 - X.Data[j]; pixel > max {
+					pixel = max
+				}
+				d := binomial.Sample(rng, uint(pixel+.5), t, float64(i+1)/float64(Iterations))
+				X.Data[j] += float32(d)
+			}
+		}
+		return X
+	}
 	coords := NewCoord(Size*Size+2, Size*Size)
-	optimizer := NewOptimizer(rng, 8, 1, 2, func(samples []Sample, x ...Matrix) {
+	optimizer := NewOptimizer(rng, 16, 1, 2, func(samples []Sample, x ...Matrix) {
 		done := make(chan bool, 8)
 		process := func(seed int64, index int) {
-			rng := rand.New(rand.NewSource(seed))
-			X := NewZeroMatrix(Size*Size+2, 1)
-			X.Data[Size*Size+1] = 1
-			for i := 0; i < Iterations; i++ {
-				t := float64(i) / float64(Iterations)
-				X.Data[Size*Size] = float32(t)
-				x := samples[index].Vars[0][0]
-				y := samples[index].Vars[0][1]
-				z := samples[index].Vars[0][2]
-				Y := Sigmoid(MulT(Add(x, H(y, z)), X))
-				xx := samples[index].Vars[1][0]
-				yy := samples[index].Vars[1][1]
-				zz := samples[index].Vars[1][2]
-				hidden := NewZeroMatrix(Size*Size+2, 1)
-				copy(hidden.Data, Y.Data)
-				hidden.Data[Size*Size] = float32(t)
-				hidden.Data[Size*Size+1] = 1
-				Y = MulT(Add(xx, H(yy, zz)), hidden)
-				for j := 0; j < Y.Size(); j++ {
-					pixel := Y.Data[j] * 255
-					if pixel < 0 {
-						pixel = 0
-					} else if max := 255 - X.Data[j]; pixel > max {
-						pixel = max
-					}
-					d := binomial.Sample(rng, uint(pixel+.5), t, float64(i+1)/float64(Iterations))
-					X.Data[j] += float32(d)
-				}
-			}
+			X := forward(seed, samples[index])
 			X.Data[Size*Size] = 0
 			X.Data[Size*Size+1] = 0
 			cost := Quadratic(target, X)
@@ -224,6 +228,11 @@ func main() {
 	for {
 		s = optimizer.Iterate()
 		fmt.Println(s.Cost)
+		X := forward(1, s)
+		X.Data[Size*Size] = 0
+		X.Data[Size*Size+1] = 0
+		diff := Sub(target, X)
+		fmt.Println(diff)
 		if last > 0 && math.Abs(last-s.Cost) < dx {
 			break
 		}
