@@ -25,6 +25,8 @@ import (
 const (
 	// Size is the size of the image
 	Size = 16
+	// Iterations is the number of iterations
+	Iterations = 64
 )
 
 // Cache is a binomial cache entry
@@ -145,10 +147,9 @@ func main() {
 
 	forms := make([]Matrix, 10)
 	for i := range forms {
-		forms[i] = NewMatrix(Size*Size+1, Size*Size)
+		forms[i] = NewMatrix(Size*Size+2, Size*Size)
 	}
-	target := NewZeroMatrix(Size*Size+1, 1)
-	target.Data[Size*Size] = 1
+	target := NewZeroMatrix(Size*Size+2, 1)
 	index := 0
 	bounds := input.Bounds()
 	width, height := bounds.Max.X, bounds.Max.Y
@@ -159,14 +160,16 @@ func main() {
 			index++
 		}
 	}
-	coords := NewCoord(Size*Size+1, Size*Size)
+	coords := NewCoord(Size*Size+2, Size*Size)
 	optimizer := NewOptimizer(rng, 8, 1, 2, func(samples []Sample, x ...Matrix) {
 		done := make(chan bool, 8)
 		process := func(seed int64, index int) {
 			rng := rand.New(rand.NewSource(seed))
-			X := NewZeroMatrix(Size*Size+1, 1)
-			X.Data[Size*Size] = 1
-			for i := 0; i < 10; i++ {
+			X := NewZeroMatrix(Size*Size+2, 1)
+			X.Data[Size*Size+1] = 1
+			for i := 0; i < Iterations; i++ {
+				t := float64(i) / float64(Iterations)
+				X.Data[Size*Size] = float32(t)
 				x := samples[index].Vars[0][0]
 				y := samples[index].Vars[0][1]
 				z := samples[index].Vars[0][2]
@@ -174,9 +177,10 @@ func main() {
 				xx := samples[index].Vars[1][0]
 				yy := samples[index].Vars[1][1]
 				zz := samples[index].Vars[1][2]
-				hidden := NewZeroMatrix(Size*Size+1, 1)
+				hidden := NewZeroMatrix(Size*Size+2, 1)
 				copy(hidden.Data, Y.Data)
-				hidden.Data[Size*Size] = 1
+				hidden.Data[Size*Size] = float32(t)
+				hidden.Data[Size*Size+1] = 1
 				Y = MulT(Add(xx, H(yy, zz)), hidden)
 				for j := 0; j < Y.Size(); j++ {
 					pixel := Y.Data[j] * 255
@@ -185,10 +189,12 @@ func main() {
 					} else if max := 255 - X.Data[j]; pixel > max {
 						pixel = max
 					}
-					d := binomial.Sample(rng, uint(pixel+.5), float64(i)*.1, float64(i+1)*.1)
+					d := binomial.Sample(rng, uint(pixel+.5), t, float64(i+1)/float64(Iterations))
 					X.Data[j] += float32(d)
 				}
 			}
+			X.Data[Size*Size] = 0
+			X.Data[Size*Size+1] = 0
 			cost := Quadratic(target, X)
 			samples[index].Cost = float64(cost.Data[0])
 			done <- true
