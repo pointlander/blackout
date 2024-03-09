@@ -201,7 +201,7 @@ func main() {
 		return X
 	}
 	coords := NewCoord(Size*Size+2, Size*Size)
-	optimizer := NewOptimizer(rng, 16, 1, 3, func(samples []Sample, x ...Matrix) {
+	optimizer := NewOptimizer(rng, 8, 1, 3, func(samples []Sample, x ...Matrix) {
 		done := make(chan bool, 8)
 		process := func(seed int64, index int) {
 			X := forward(seed, samples[index])
@@ -230,6 +230,7 @@ func main() {
 			<-done
 		}
 	}, coords)
+	optimizer.Norm = true
 	//s := optimizer.Optimize(1e-6)
 	dx, last := 1e-6, -1.0
 	var s Sample
