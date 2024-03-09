@@ -26,7 +26,7 @@ const (
 	// Size is the size of the image
 	Size = 16
 	// Iterations is the number of iterations
-	Iterations = 64
+	Iterations = 128
 )
 
 // Cache is a binomial cache entry
