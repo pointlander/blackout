@@ -12,7 +12,6 @@ import (
 	"image/png"
 	"log"
 	"math"
-	"math/rand"
 	"os"
 	"runtime"
 	"strings"
@@ -71,7 +70,7 @@ func Probability(t1, t2 float64) float64 {
 }
 
 // Sample samples the binomial distribution
-func (b *ByteCache) Sample(rng *rand.Rand, n uint, l1, l2 float64) uint {
+func (b *ByteCache) Sample(rng *Rand, n uint, l1, l2 float64) uint {
 	sum := 0.0
 	sample := rng.Float64()
 	p := Probability(l1, l2)
@@ -139,9 +138,9 @@ func main() {
 	}
 	file.Close()
 
-	rng := rand.New(rand.NewSource(1))
+	rng := Rand(1)
 	for i := 0; i < 16; i++ {
-		s := binomial.Sample(rng, 128, .1, .5)
+		s := binomial.Sample(&rng, 128, .1, .5)
 		fmt.Println(s)
 	}
 
@@ -160,33 +159,37 @@ func main() {
 			index++
 		}
 	}
-	forward := func(seed int64, sample Sample) Matrix {
-		rng := rand.New(rand.NewSource(seed))
+	forward := func(seed uint32, sample Sample) Matrix {
+		seed += 1
+		if seed == 0 {
+			seed = 1
+		}
+		rng := Rand(seed)
 		X := NewZeroMatrix(Size*Size+2, 1)
 		X.Data[Size*Size+1] = 1
 		for i := 0; i < Iterations; i++ {
 			t := float64(i) / float64(Iterations)
 			X.Data[Size*Size] = float32(t)
-			x := sample.Vars[0][0]
-			y := sample.Vars[0][1]
-			z := sample.Vars[0][2]
-			Y := Sigmoid(MulT(Add(x, H(y, z)), X))
-			xx := sample.Vars[1][0]
-			yy := sample.Vars[1][1]
-			zz := sample.Vars[1][2]
+			x := sample.Vars[0][0].Sample()
+			y := sample.Vars[0][1].Sample()
+			z := sample.Vars[0][2].Sample()
+			Y := x.Add(y.H(z)).MulT(X).Sigmoid()
+			xx := sample.Vars[1][0].Sample()
+			yy := sample.Vars[1][1].Sample()
+			zz := sample.Vars[1][2].Sample()
 			hidden := NewZeroMatrix(Size*Size+2, 1)
 			copy(hidden.Data, Y.Data)
 			hidden.Data[Size*Size] = float32(t)
 			hidden.Data[Size*Size+1] = 1
-			Y = Sigmoid(MulT(Add(xx, H(yy, zz)), hidden))
-			xxx := sample.Vars[2][0]
-			yyy := sample.Vars[2][1]
-			zzz := sample.Vars[2][2]
+			Y = xx.Add(yy.H(zz)).MulT(hidden).Sigmoid()
+			xxx := sample.Vars[2][0].Sample()
+			yyy := sample.Vars[2][1].Sample()
+			zzz := sample.Vars[2][2].Sample()
 			hidden = NewZeroMatrix(Size*Size+2, 1)
 			copy(hidden.Data, Y.Data)
 			hidden.Data[Size*Size] = float32(t)
 			hidden.Data[Size*Size+1] = 1
-			Y = MulT(Add(xxx, H(yyy, zzz)), hidden)
+			Y = xxx.Add(yyy.H(zzz)).MulT(hidden)
 			for j := 0; j < Y.Size(); j++ {
 				pixel := Y.Data[j] * 255
 				if pixel < 0 {
@@ -194,27 +197,27 @@ func main() {
 				} else if max := 255 - X.Data[j]; pixel > max {
 					pixel = max
 				}
-				d := binomial.Sample(rng, uint(pixel+.5), t, float64(i+1)/float64(Iterations))
+				d := binomial.Sample(&rng, uint(pixel+.5), t, float64(i+1)/float64(Iterations))
 				X.Data[j] += float32(d)
 			}
 		}
 		return X
 	}
 	coords := NewCoord(Size*Size+2, Size*Size)
-	optimizer := NewOptimizer(rng, 8, 1, 3, func(samples []Sample, x ...Matrix) {
+	optimizer := NewOptimizer(&rng, 10, 1, 3, func(samples []Sample, x ...Matrix) {
 		done := make(chan bool, 8)
-		process := func(seed int64, index int) {
+		process := func(seed uint32, index int) {
 			X := forward(seed, samples[index])
 			X.Data[Size*Size] = 0
 			X.Data[Size*Size+1] = 0
-			cost := Quadratic(target, X)
+			cost := target.Quadratic(X)
 			samples[index].Cost = float64(cost.Data[0])
 			done <- true
 		}
 		cpus := runtime.NumCPU()
 		j, flight := 0, 0
 		for j < len(samples) && flight < cpus {
-			go process(rng.Int63(), j)
+			go process(rng.Uint32(), j)
 			j++
 			flight++
 		}
@@ -222,7 +225,7 @@ func main() {
 			<-done
 			flight--
 
-			go process(rng.Int63(), j)
+			go process(rng.Uint32(), j)
 			j++
 			flight++
 		}
@@ -240,13 +243,13 @@ func main() {
 		X := forward(1, s)
 		X.Data[Size*Size] = 0
 		X.Data[Size*Size+1] = 0
-		diff := Sub(target, X)
+		diff := target.Sub(X)
 		fmt.Println(diff)
 		if last > 0 && math.Abs(last-s.Cost) < dx {
 			break
 		}
 		last = s.Cost
 	}
-	x := Add(s.Vars[0][0], H(s.Vars[0][1], s.Vars[0][2]))
+	x := s.Vars[0][0].Sample().Add(s.Vars[0][1].Sample().H(s.Vars[0][2].Sample()))
 	_ = x
 }
