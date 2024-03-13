@@ -177,18 +177,18 @@ func main() {
 			xx := sample.Vars[1][0].Sample()
 			yy := sample.Vars[1][1].Sample()
 			zz := sample.Vars[1][2].Sample()
-			hidden := NewZeroMatrix(Size*Size+2, 1)
+			hidden := NewZeroMatrix(2*Size*Size+2, 1)
 			copy(hidden.Data, Y.Data)
-			hidden.Data[Size*Size] = float32(t)
-			hidden.Data[Size*Size+1] = 1
+			hidden.Data[2*Size*Size] = float32(t)
+			hidden.Data[2*Size*Size+1] = 1
 			Y = xx.Add(yy.H(zz)).MulT(hidden).Sigmoid()
 			xxx := sample.Vars[2][0].Sample()
 			yyy := sample.Vars[2][1].Sample()
 			zzz := sample.Vars[2][2].Sample()
-			hidden = NewZeroMatrix(Size*Size+2, 1)
+			hidden = NewZeroMatrix(2*Size*Size+2, 1)
 			copy(hidden.Data, Y.Data)
-			hidden.Data[Size*Size] = float32(t)
-			hidden.Data[Size*Size+1] = 1
+			hidden.Data[2*Size*Size] = float32(t)
+			hidden.Data[2*Size*Size+1] = 1
 			Y = xxx.Add(yyy.H(zzz)).MulT(hidden)
 			for j := 0; j < Y.Size(); j++ {
 				pixel := Y.Data[j] * 255
@@ -203,7 +203,9 @@ func main() {
 		}
 		return X
 	}
-	coords := NewCoord(Size*Size+2, Size*Size)
+	coordsA := NewCoord(Size*Size+2, 2*Size*Size)
+	coordsB := NewCoord(2*Size*Size+2, 2*Size*Size)
+	coordsC := NewCoord(2*Size*Size+2, Size*Size)
 	optimizer := NewOptimizer(&rng, 10, 1, 3, func(samples []Sample, x ...Matrix) {
 		done := make(chan bool, 8)
 		process := func(seed uint32, index int) {
@@ -232,7 +234,7 @@ func main() {
 		for j := 0; j < flight; j++ {
 			<-done
 		}
-	}, coords)
+	}, coordsA, coordsB, coordsC)
 	optimizer.Norm = true
 	//s := optimizer.Optimize(1e-6)
 	dx, last := 1e-6, -1.0
