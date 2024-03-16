@@ -6,3 +6,5 @@ github.com/pointlander/matrix v0.0.0-20240309001756-eb877f887c5e h1:r+uBeWPqhuVB
 github.com/pointlander/matrix v0.0.0-20240309001756-eb877f887c5e/go.mod h1:uV0Qn/6rCMrIh+TFYFGRpVeesmHB/3GftLPXbJUDdqY=
 github.com/pointlander/matrix v0.0.0-20240312155554-3c01bb2a1369 h1:VW9odKDt6ATljGQlNnMYYNmsmVEgp0CJDVWPaqsNZ/c=
 github.com/pointlander/matrix v0.0.0-20240312155554-3c01bb2a1369/go.mod h1:uV0Qn/6rCMrIh+TFYFGRpVeesmHB/3GftLPXbJUDdqY=
+github.com/pointlander/matrix v0.0.0-20240315204430-a9a552b72f75 h1:pByVcY4mHaLmGm9lyCe+vzoQqloGb0aB/8DG1bPyG+w=
+github.com/pointlander/matrix v0.0.0-20240315204430-a9a552b72f75/go.mod h1:uV0Qn/6rCMrIh+TFYFGRpVeesmHB/3GftLPXbJUDdqY=
